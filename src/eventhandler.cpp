@@ -53,7 +53,7 @@ void EventHandler::runEventLoop()
     connect(this, SIGNAL(connectionRejected()), QCoreApplication::instance(), SLOT(quit()));
 
     // Start another thread to listen connection from invoker
-    QtConcurrent::run(this, &EventHandler::accept);
+    QtConcurrent::run([this]() { accept(); });
 
     // Create socket pair for SIGHUP
     bool handlerIsSet = false;
