@@ -1,30 +1,19 @@
 import QtQuick
-import com.nokia.meego
+import org.asteroid.controls
 
-ApplicationWindow {
-    Button { }
-    Label { }
-    PageHeader { }
-    Slider { }
+Application {
+    BorderGestureArea { }
+    CircularSpinner { }
+    HandWritingKeyboard { }
+    IconButton { }
+    Indicator { }
+    Label {}
+    LayerStack { }
+    Marquee { }
+    PageDot { }
+    Spinner { }
+    StatusPage { }
     Switch { }
-    TextArea { }
     TextField { }
-    Component {
-        // These will be compiled but not instantiated.
-        // If instantiation won't result in further caching then place those
-        // components here.
-        Item {
-            ContextMenu { }
-            DatePickerDialog { }
-            TimePickerDialog { }
-            Dialog { }
-            ScrollDecorator { }
-            Menu {
-                MenuItem { }
-            }
-            Page { }
-            Sheet { }
-        }
-    }
 }
 

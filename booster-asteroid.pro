@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-TARGET = booster-qtcomponents-qt6
+TARGET = booster-asteroid-qt6
 QT += qml quick concurrent
 qml.files = qml-qt6/preload.qml
 

@@ -29,7 +29,7 @@
 #include "daemon.h"
 #include <MDeclarativeCache>
 
-const string QMLBooster::m_boosterType = "qtcomponents-qt6";
+const string QMLBooster::m_boosterType = "asteroid-qt6";
 
 const string & QMLBooster::boosterType() const
 {
