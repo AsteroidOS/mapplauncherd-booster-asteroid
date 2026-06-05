@@ -15,6 +15,11 @@ service.files = data/$${TARGET}.service
 INSTALLS += target qml service
 
 LIBS += -lapplauncherd -lmdeclarativecache6 -lEGL
+
+# Resolve all relocations at startup so they do not turn into private dirty
+# pages within boosted applications. A little extra initial memory in the
+# supervisor for a lot of CoW-shared pages per app.
+QMAKE_LFLAGS += -Wl,-z,now
 INCLUDEPATH += /usr/include/applauncherd/
 
 SOURCES += src/qmlbooster.cpp src/eventhandler.cpp
