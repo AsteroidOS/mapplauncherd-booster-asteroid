@@ -14,7 +14,7 @@ service.files = data/$${TARGET}.service
 
 INSTALLS += target qml service
 
-LIBS += -lapplauncherd -lmdeclarativecache6
+LIBS += -lapplauncherd -lmdeclarativecache6 -lEGL
 INCLUDEPATH += /usr/include/applauncherd/
 
 SOURCES += src/qmlbooster.cpp src/eventhandler.cpp

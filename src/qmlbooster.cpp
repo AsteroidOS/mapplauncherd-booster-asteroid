@@ -23,6 +23,8 @@
 #include <QQuickView>
 #include <QtQml>
 
+#include <EGL/egl.h>
+
 #include "qmlbooster.h"
 #include "connection.h"
 #include "logger.h"
@@ -121,6 +123,12 @@ void QMLBooster::preinit()
 
 int main(int argc, char **argv)
 {
+    // Resolve the EGL/GLES backing libraries in the supervisor so workers
+    // forked by Daemon::run() inherit them. eglBindAPI does not create a
+    // wayland connection -- eglGetDisplay would, and that would not survive
+    // the fork.
+    (void)eglBindAPI(EGL_OPENGL_ES_API);
+
     QMLBooster *booster = new QMLBooster;
     Daemon d(argc, argv);
     d.run(booster);
