@@ -18,9 +18,13 @@
 ****************************************************************************/
 
 #include <QFileInfo>
-#include <QtGlobal>
-
+#include <QQmlComponent>
+#include <QQmlContext>
+#include <QQmlEngine>
+#include <QQmlError>
 #include <QQuickView>
+#include <QUrl>
+#include <QtGlobal>
 #include <QtQml>
 
 #include <EGL/egl.h>
@@ -33,6 +37,74 @@
 
 const string QMLBooster::m_boosterType = "asteroid-qt6";
 
+// Run the preload through an Asynchronous QQmlComponent so the booster's
+// main thread is free to receive an invoker connection while the compile
+// runs on Qt's loader thread. The component is kept alive after create()
+// so its compiled bytecode cache stays around until the app starts.
+class QMLBoosterData : public QObject
+{
+    Q_OBJECT
+public:
+    QMLBoosterData()
+        : QObject(), engine(0), component(0)
+    {
+    }
+
+    ~QMLBoosterData()
+    {
+        if (component && component->isLoading())
+            Logger::logInfo("QMLBooster: Preload compilation aborted.");
+        delete component;
+    }
+
+    void beginPreload(QQmlEngine *e, const QUrl &url)
+    {
+        engine = e;
+        source = url;
+        Logger::logInfo("QMLBooster: Initiate asynchronous preload.");
+        component = new QQmlComponent(engine, source, QQmlComponent::Asynchronous);
+        if (component->isLoading()) {
+            QObject::connect(component, &QQmlComponent::statusChanged,
+                             this, &QMLBoosterData::statusChanged);
+        } else {
+            statusChanged();
+        }
+    }
+
+private slots:
+    void statusChanged()
+    {
+        if (component->isError()) {
+            Logger::logError("QMLBooster: Preload component failed to load:");
+            foreach (const QQmlError &e, component->errors())
+                Logger::logError("QMLBooster:    %s", e.toString().toLatin1().constData());
+        } else {
+            QQmlContext context(engine);
+            QObject *obj = component->create(&context);
+            if (obj)
+                obj->setParent(this);
+            else
+                Logger::logError("QMLBooster: Preload object creation failed");
+            delete obj;
+        }
+    }
+
+private:
+    QQmlEngine *engine;
+    QQmlComponent *component;
+    QUrl source;
+};
+
+QMLBooster::QMLBooster()
+    : Booster(), data(new QMLBoosterData)
+{
+}
+
+QMLBooster::~QMLBooster()
+{
+    delete data;
+}
+
 const string & QMLBooster::boosterType() const
 {
     return m_boosterType;
@@ -42,25 +114,11 @@ bool QMLBooster::preload()
 {
     QQuickView *view = MDeclarativeCache::populate();
 
-    // Load a QML file that references common elements, which will compile and cache them all
     QString file = "/usr/share/booster-";
     file += boosterType().c_str();
     file += "/preload.qml";
 
-    QQmlComponent component(view->engine(), QUrl::fromLocalFile(file));
-    if (!component.isReady()) {
-        Logger::logError("QMLBooster: Preload component failed to load:");
-        foreach (const QQmlError &e, component.errors())
-            Logger::logError("QMLBooster:    %s", e.toString().toLatin1().constData());
-        return true;
-    }
-
-    // Create an instance of that object, which will initialize everything else
-    QQmlContext context(view->engine());
-    QObject *obj = component.create(&context);
-    if (!obj)
-        Logger::logError("QMLBooster: Preload object creation failed");
-    delete obj;
+    data->beginPreload(view->engine(), QUrl::fromLocalFile(file));
 
     return true;
 }
@@ -81,6 +139,12 @@ bool QMLBooster::receiveDataFromInvoker(int socketFd)
 
         EventHandler handler(this);
         handler.runEventLoop();
+
+        // An invoker is here -- stop any in-flight preload so we do not
+        // compete with the app that is about to start. The destructor
+        // aborts the async QQmlComponent if it is still loading.
+        delete data;
+        data = 0;
 
         if (!connection()->connected())
         {
@@ -134,4 +198,6 @@ int main(int argc, char **argv)
     d.run(booster);
     return 0;
 }
+
+#include "qmlbooster.moc"
 
